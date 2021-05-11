@@ -150,7 +150,7 @@ func printDictToWebPage(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	var s string
 	for res.Next() {
 		err = res.Scan(&pair.Word, &pair.Meaning)
-		s = fmt.Sprintf("%v = %v\n", pair.Word, pair.Meaning) // НЕ ПЕЧАТАЕТ ПЕРЕНОС СТРОКИ!!!
+		s = fmt.Sprintf("%v = %v\n", pair.Word, pair.Meaning)
 		_, err = fmt.Fprintf(w, s)
 		if err != nil {
 			fmt.Println(err)
@@ -199,7 +199,7 @@ func saveToFile(db *sql.DB) {
 	var s string
 	for res.Next() {
 		err = res.Scan(&pair.Word, &pair.Meaning)
-		s = fmt.Sprintf("%v = %v\n", pair.Word, pair.Meaning) // НЕ ПЕЧАТАЕТ ПЕРЕНОС СТРОКИ!!!
+		s = fmt.Sprintf("%v = %v\n", pair.Word, pair.Meaning)
 		_, err := file.WriteString(s)
 		if err != nil {
 			fmt.Println(err)
