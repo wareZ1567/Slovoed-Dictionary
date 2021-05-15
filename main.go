@@ -28,32 +28,17 @@ func main() {
 	}
 	dbp = db
 
-	defer func() {
-		err := db.Close()
-		if err != nil {
-			fmt.Println("Ошибка при закрытии файла БД.")
-		}
-	}() // Закрыть БД
+	defer closeDB(db) // Закрыть БД
 
-	// Создание таблицы
-	sqlString := "CREATE TABLE IF NOT EXISTS dictionary (word TEXT PRIMARY KEY NOT NULL, meaning TEXT NOT NULL);"
-	stmt, err := db.Prepare(sqlString)
-	if err != nil {
-		fmt.Printf("ОШИБКА подготовки команды SQL ф-ей Prepare(). %v", err)
-	}
-	_, err = stmt.Exec()
-	if err != nil {
-		fmt.Printf("ОШИБКА выполнения SQL команды ф-ей Exec(). %v", err)
-	}
+	// Создание таблицы, если её нет
+	sqlCommand("CREATE TABLE IF NOT EXISTS dictionary (word TEXT PRIMARY KEY NOT NULL, meaning TEXT NOT NULL);", db)
 
-	// Добавление в таблицу новых значений
-	sqlCommand("INSERT INTO dictionary (word, meaning) VALUES ('intended', 'предполагаемый, запланированный');", db)
-	sqlCommand("INSERT INTO dictionary (word, meaning) VALUES ('book', 'книга');", db)
-	sqlCommand("INSERT INTO dictionary (word, meaning) VALUES ('constraint', 'уточнение, ограничение');", db)
-
+	// Вывод словаря в консоль
 	printDict(db)
 
 	var option string
+
+	// Текстовое меню с выбором действий со словарём
 	for {
 		fmt.Println("Введите N , чтобы ввести новое слово.\nQ для выхода.\n" +
 			"P для вывода словаря в консоль в алфавитном порядке.\nS для сохранения на диск.\n" +
@@ -163,6 +148,7 @@ func pageNotFound404(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+// Сохраняет словарь в файл на локальном хранилище, имя файла задаёт пользователь
 func saveToFile(db *sql.DB) {
 	var textFileName string
 
@@ -173,6 +159,7 @@ func saveToFile(db *sql.DB) {
 	}
 	textFileName += ".txt"
 
+	// Создать файл
 	file, err := os.Create(textFileName)
 	if err != nil {
 		fmt.Println(err)
@@ -184,6 +171,7 @@ func saveToFile(db *sql.DB) {
 		}
 	}()
 
+	// Получение всех значений записей в таблице БД, в которой хранится словарь
 	res, err := db.Query("SELECT * FROM dictionary ORDER BY word")
 	if err != nil {
 		fmt.Println(err)
@@ -197,6 +185,7 @@ func saveToFile(db *sql.DB) {
 
 	var pair Wm
 	var s string
+	// Запись словаря в файл построчно каждой пары "слово - значение"
 	for res.Next() {
 		err = res.Scan(&pair.Word, &pair.Meaning)
 		s = fmt.Sprintf("%v = %v\n", pair.Word, pair.Meaning)
@@ -220,6 +209,7 @@ func insertWordAndMeaning(db *sql.DB) {
 	if err != nil {
 		fmt.Println(err)
 	}
+
 	var sqlString string
 	sqlString = fmt.Sprintf("INSERT INTO dictionary (word, meaning) VALUES ('%v', '%v');", pair.Word, pair.Meaning)
 	sqlCommand(sqlString, db)
@@ -231,6 +221,7 @@ func createIfNotExist(fileName string) {
 	if err != nil {
 		fmt.Println(err)
 	}
+
 	err = file.Close()
 	if err != nil {
 		fmt.Println(err)
@@ -249,10 +240,16 @@ func printDict(db *sql.DB) {
 			fmt.Println(err)
 		}
 	}()
+
 	var pair Wm
+	// Построчно выводит пары "слово - значение" из словаря в консоль
 	for res.Next() {
 		err = res.Scan(&pair.Word, &pair.Meaning)
 		fmt.Printf("%v = %v\n", pair.Word, pair.Meaning)
+	}
+	err = res.Close()
+	if err != nil {
+		fmt.Println(err)
 	}
 }
 
@@ -265,5 +262,17 @@ func sqlCommand(sqlString string, db *sql.DB) {
 	_, err = stmt.Exec()
 	if err != nil {
 		fmt.Printf("ОШИБКА выполнения SQL команды ф-ей Exec(). %v", err)
+	}
+	err = stmt.Close()
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+
+// Закрывает БД
+func closeDB(db *sql.DB) {
+	err := db.Close()
+	if err != nil {
+		fmt.Println(err)
 	}
 }
