@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"net/http"
@@ -72,9 +73,16 @@ func main() {
 					Handler: http.HandlerFunc(router),
 				}
 
-				if err := server.ListenAndServe(); err != nil {
-					fmt.Println("Ошибка запуска сервера")
-				}
+				go func() {
+					err = server.ListenAndServe()
+					if err != nil {
+						fmt.Println("Обновите страницу в браузере.")
+					}
+					err = server.Shutdown(context.TODO())
+					if err != nil {
+						fmt.Println(err)
+					}
+				}()
 			}
 		case "D":
 			{
@@ -112,14 +120,14 @@ func main() {
 func router(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Path {
 	case "/":
-		printDictToWebPage(w, r, dbp)
+		printDictToWebPage(w, dbp)
 	default:
-		pageNotFound404(w, r)
+		pageNotFound404(w)
 	}
 }
 
 // Вывод словаря на веб-страницу
-func printDictToWebPage(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func printDictToWebPage(w http.ResponseWriter, db *sql.DB) {
 	res, err := db.Query("SELECT * FROM dictionary ORDER BY word")
 	if err != nil {
 		fmt.Println(err)
@@ -143,7 +151,7 @@ func printDictToWebPage(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	}
 }
 
-func pageNotFound404(w http.ResponseWriter, r *http.Request) {
+func pageNotFound404(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusNotFound) // 404
 	return
 }
